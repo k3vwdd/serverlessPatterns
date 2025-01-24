@@ -1,6 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as path from 'path';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 export class ServerlessPatternsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -13,6 +16,18 @@ export class ServerlessPatternsStack extends cdk.Stack {
         },
         tableName: "serverless_workshop_intro",
     });
+
+    const m1AddSampleData = new lambda.Function(this, "AddSampleDataFunction", {
+        functionName: "m1AddSampleData",
+        runtime: lambda.Runtime.NODEJS_22_X,
+        timeout: cdk.Duration.seconds(60),
+        memorySize: 128,
+        handler: "m1AddSampleData.handler",
+        code: lambda.Code.fromAsset(path.join(__dirname, "../assets/dist/AddSampleDataFunction/")),
+    });
+
+    usersTable.grantFullAccess(m1AddSampleData);
+
 
 
   }
