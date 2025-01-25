@@ -3,7 +3,8 @@ import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
-import * as iam from 'aws-cdk-lib/aws-iam';
+import * as api from 'aws-cdk-lib/aws-apigateway';
+import { ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
 export class ServerlessPatternsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -15,6 +16,7 @@ export class ServerlessPatternsStack extends cdk.Stack {
             type: dynamodb.AttributeType.STRING
         },
         tableName: "serverless_workshop_intro",
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     const m1AddSampleData = new lambda.Function(this, "AddSampleDataFunction", {
@@ -35,10 +37,28 @@ export class ServerlessPatternsStack extends cdk.Stack {
         code: lambda.Code.fromAsset(path.join(__dirname, "../assets/dist/ReadDataFunction/")),
     });
 
+    const getUsersIntegration = new api.LambdaIntegration(readData);
+
+    const restApi = new api.RestApi(this, "ServerlessApi", {
+        restApiName: "ServerlessREST",
+        cloudWatchRole: true,
+        deployOptions: {
+            stageName: "v1",
+            loggingLevel: api.MethodLoggingLevel.INFO,
+            dataTraceEnabled: true,
+            metricsEnabled: true,
+            tracingEnabled: true,
+        },
+        deploy: true,
+    });
+
+    const usersApiResource = restApi.root.addResource("users");
+    usersApiResource.addMethod("GET", getUsersIntegration);
+    readData.addPermission('PermitAPIGInvocation', {
+        principal: new ServicePrincipal('apigateway.amazonaws.com'),
+    });
+
     usersTable.grantReadData(readData);
     usersTable.grantFullAccess(m1AddSampleData);
-
-
-
   }
 }
