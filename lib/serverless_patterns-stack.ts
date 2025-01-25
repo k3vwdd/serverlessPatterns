@@ -26,6 +26,16 @@ export class ServerlessPatternsStack extends cdk.Stack {
         code: lambda.Code.fromAsset(path.join(__dirname, "../assets/dist/AddSampleDataFunction/")),
     });
 
+    const readData = new lambda.Function(this, "ReadDataFunction", {
+        functionName: "get-users",
+        runtime: lambda.Runtime.NODEJS_22_X,
+        timeout: cdk.Duration.seconds(60),
+        memorySize: 128,
+        handler: "getUsers.handler",
+        code: lambda.Code.fromAsset(path.join(__dirname, "../assets/dist/ReadDataFunction/")),
+    });
+
+    usersTable.grantReadData(readData);
     usersTable.grantFullAccess(m1AddSampleData);
 
 

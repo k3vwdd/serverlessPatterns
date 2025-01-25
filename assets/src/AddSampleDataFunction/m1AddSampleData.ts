@@ -1,13 +1,13 @@
 import { DynamoDBDocument, BatchWriteCommand } from "@aws-sdk/lib-dynamodb"; // ES6 import
 import { DynamoDB } from "@aws-sdk/client-dynamodb";
 import { randomUUID } from "crypto";
+import { Handler } from "aws-lambda";
 
 const client = new DynamoDB({});
 const ddbDocClient = DynamoDBDocument.from(client);
-
 const tableName = "serverless_workshop_intro";
 
-export async function handler(event: any) {
+export async function handler(event: Handler) {
     console.log(`Event recieved ${JSON.stringify(event, null, 2)}`);
 
     const people = [
@@ -34,7 +34,7 @@ export async function handler(event: any) {
                 },
             });
             const response = await ddbDocClient.send(command);
-            console.log(`Response: ${response} > Batch writing: ${people[i].userid}`);
+            console.log(`Response: ${JSON.stringify(response)} > Batch writing: ${people[i].userid}`);
         }
         const result = `Success added ${people.length} people to ${tableName}`
         return result;
