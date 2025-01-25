@@ -2,7 +2,7 @@
   "name": "serverless_patterns",
   "version": "0.1.0",
   "bin": {
-    "serverless_patterns": "bin/serverless_patterns.js"
+    "serverless_patterns": "bin/app.js"
   },
   "scripts": {
     "build": "tsc",
