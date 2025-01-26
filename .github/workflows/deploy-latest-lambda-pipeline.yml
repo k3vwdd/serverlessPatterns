@@ -1,0 +1,64 @@
+name: Deploy Lambda Functions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'assets/src/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm ci
+          cd assets && npm ci
+          cd ..
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Build Lambda Functions
+        run: npm run build:lambda
+
+      - name: Deploy Lambda Functions
+        run: |
+          for dir in assets/dist/*/; do
+            if [ -d "$dir" ]; then
+              func_name=$(basename "$dir")
+              tmp_dir=$(mktemp -d)
+
+              cp -r "$dir"* "$tmp_dir/"
+              cd assets
+              cp -r node_modules "$tmp_dir/"
+              cd ..
+              cd "$tmp_dir"
+              zip -q -r ../function.zip .
+              cd ..
+
+              echo "Deploying $func_name..."
+              aws lambda update-function-code \
+                --function-name "$func_name" \
+                --zip-file fileb://function.zip \
+                --publish \
+                --no-cli-pager
+
+              rm -rf "$tmp_dir"
+              rm function.zip
+            fi
+          done
