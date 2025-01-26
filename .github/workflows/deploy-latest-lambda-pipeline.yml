@@ -47,12 +47,28 @@ jobs:
 
       - name: Deploy Lambda Functions
         run: |
-          for dir in assets/dist/*/; do
-            if [ -d "$dir" ]; then
-              func_name=$(basename "$dir")
-              tmp_dir=$(mktemp -d)
+          # Get list of existing Lambda functions
+          EXISTING_FUNCTIONS=$(aws lambda list-functions --query 'Functions[].FunctionName' --output json | jq -r '.[]')
+          echo "Found AWS Lambda functions:"
+          echo "$EXISTING_FUNCTIONS"
 
-              cp -r "$dir"* "$tmp_dir/"
+          # Get list of local function directories
+          LOCAL_FUNCTIONS=$(find assets/dist -maxdepth 1 -mindepth 1 -type d -exec basename {} \;)
+          echo "Found local function directories:"
+          echo "$LOCAL_FUNCTIONS"
+
+          # Find matching functions
+          MATCHING_FUNCTIONS=$(comm -12 <(echo "$EXISTING_FUNCTIONS" | sort) <(echo "$LOCAL_FUNCTIONS" | sort))
+          echo "Matching functions to deploy:"
+          echo "$MATCHING_FUNCTIONS"
+
+          # Deploy only matching functions
+          echo "$MATCHING_FUNCTIONS" | while read func_name; do
+            if [ ! -z "$func_name" ]; then
+              echo "Deploying $func_name..."
+
+              tmp_dir=$(mktemp -d)
+              cp -r "assets/dist/$func_name/"* "$tmp_dir/"
 
               cd assets
               cp -r node_modules "$tmp_dir/"
@@ -62,7 +78,6 @@ jobs:
               zip -q -r ../function.zip .
               cd ..
 
-              echo "Deploying $func_name..."
               aws lambda update-function-code \
                 --function-name "$func_name" \
                 --zip-file fileb://function.zip \
@@ -71,5 +86,7 @@ jobs:
 
               rm -rf "$tmp_dir"
               rm function.zip
+
+              echo "Successfully deployed $func_name"
             fi
           done
