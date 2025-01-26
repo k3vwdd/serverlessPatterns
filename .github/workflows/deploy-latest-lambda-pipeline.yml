@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'assets/src/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -20,11 +21,16 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Dependencies
+      - name: Install Root Dependencies
         run: |
-          npm ci
-          cd assets && npm ci
-          cd ..
+          npm install
+          npm install --save-dev @types/aws-lambda@8.10.147
+
+      - name: Install Assets Dependencies
+        working-directory: ./assets
+        run: |
+          npm install
+          npm install --save-dev @types/aws-lambda@8.10.147
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -44,9 +50,11 @@ jobs:
               tmp_dir=$(mktemp -d)
 
               cp -r "$dir"* "$tmp_dir/"
+
               cd assets
               cp -r node_modules "$tmp_dir/"
               cd ..
+
               cd "$tmp_dir"
               zip -q -r ../function.zip .
               cd ..
