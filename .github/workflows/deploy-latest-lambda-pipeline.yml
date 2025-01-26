@@ -11,6 +11,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: AWS_ACCESS_KEYS
 
     steps:
       - uses: actions/checkout@v3
@@ -38,6 +39,8 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+          role-duration-seconds: 1200
+          audience: sts.amazonaws.com
 
       - name: Build Lambda Functions
         run: npm run build:lambda
