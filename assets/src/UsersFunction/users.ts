@@ -1,19 +1,17 @@
 import { Context, APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { DeleteCommand, DynamoDBDocument, GetCommand, PutCommand, ScanCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { marshall } from "@aws-sdk/util-dynamodb";
+import { DeleteCommand, DynamoDBDocument, GetCommand, PutCommand, QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 const client = new DynamoDBClient({});
 const ddbDocClient = DynamoDBDocument.from(client);
 
 const USERS_TABLE = process.env.USERS_TABLE || "";
-//const USERS_TABLE = "testUsers";
 
 enum UserRoutes  {
     CREATE_USER = "POST /users",
-        DELETE_USER = "DELETE /users/{userid}",
-        GET_USER = "GET /users/{userid}",
-        GET_USERS = "GET /users",
-        UPDATE_USER = "PUT /users/{userid}",
+    DELETE_USER = "DELETE /users/{userid}",
+    GET_USER = "GET /users/{userid}",
+    GET_USERS = "GET /users",
+    UPDATE_USER = "PUT /users/{userid}",
 }
 const defaultHeaders = {
     "Content-Type": "application/json",
@@ -32,10 +30,11 @@ async function createUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
             KeyConditionExpression: "username = :username",
             ExpressionAttributeValues: {":username": userName},
         }))
-        if (response.Items?.length! > 0) {
+        const item = response?.Items ?? "";
+        if (item.length > 0) {
             return {
                 statusCode: 200,
-                headers: { ...defaultHeaders },
+                //headers: { ...defaultHeaders },
                 body: "User already in db"
             }
         } else {
@@ -58,6 +57,65 @@ async function createUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
         throw error;
     }
 };
+async function deleteUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    const userId = event.pathParameters?.userid ?? "" ;
+    console.log(userId)
+    try {
+        const response = await ddbDocClient.send(new GetCommand({
+            TableName: USERS_TABLE,
+            Key: {
+                userid: userId,
+            },
+        }))
+        if (!response.Item) {
+            return {
+                statusCode: 200,
+                headers: { ...defaultHeaders },
+                body: `${userId} doesn't exist in database`
+            }
+        } else {
+            await ddbDocClient.send(new DeleteCommand({
+                TableName: USERS_TABLE,
+                Key: {
+                    userid: userId,
+                },
+            }));
+            return {
+                statusCode: 200,
+                headers: { ...defaultHeaders },
+                body: JSON.stringify(`${userId} deleted`),
+            }
+        }
+    } catch (error) {
+        throw error;
+    };
+};
+
+async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    let result, ExclusiveStartKey;
+    let accumulated: Record<string, any>[] | undefined;
+    try {
+        do {
+            result = await ddbDocClient.send(new ScanCommand({
+                TableName: USERS_TABLE,
+                ExclusiveStartKey,
+                Limit: 10,
+            }));
+            accumulated = [...accumulated ?? [], ...result.Items ?? []]
+            ExclusiveStartKey = result.LastEvaluatedKey;
+        } while (result.LastEvaluatedKey);
+
+        return {
+            statusCode: 200,
+            headers: {...defaultHeaders},
+            body: JSON.stringify(accumulated),
+        }
+    } catch (error) {
+        throw error;
+    }
+};
+
+
 
 export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
     console.log(`Event recieved: ${JSON.stringify(event, null, 2)}`);
@@ -67,6 +125,10 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
         switch (routeKey) {
             case UserRoutes.CREATE_USER:
                  return await createUser(event);
+            case UserRoutes.DELETE_USER:
+                 return await deleteUser(event);
+            case UserRoutes.GET_USERS:
+                return await getUser(event);
             default:
                 return {
                     statusCode: 400,
