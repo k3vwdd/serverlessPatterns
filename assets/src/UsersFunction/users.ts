@@ -1,8 +1,6 @@
 import { Context, APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { DeleteCommand, DynamoDBDocument, GetCommand, PutCommand, QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { error } from "console";
-import { errorCode } from "aws-sdk/clients/ivs";
 const client = new DynamoDBClient({});
 const ddbDocClient = DynamoDBDocument.from(client);
 
@@ -36,7 +34,7 @@ async function createUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyR
         if (item.length > 0) {
             return {
                 statusCode: 200,
-                //headers: { ...defaultHeaders },
+                headers: { ...defaultHeaders },
                 body: "User already in db"
             }
         } else {
@@ -119,7 +117,7 @@ async function getUsers(event: APIGatewayProxyEvent): Promise<APIGatewayProxyRes
 
 
 export async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-   const userid = event.pathParameters?.userid
+   const userid = event.pathParameters?.userid || "{}";
    try {
         const response = await ddbDocClient.send(new GetCommand({
             TableName: USERS_TABLE,
@@ -144,6 +142,24 @@ export async function getUser(event: APIGatewayProxyEvent): Promise<APIGatewayPr
    }
 }
 
+export async function updateUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    const { userid } = event.pathParameters || {};
+    const body = JSON.parse(event.body || '{}');
+    body['timestamp'] = new Date().toISOString();
+    body['userid'] = userid;
+    await ddbDocClient.send(new PutCommand({
+        TableName: USERS_TABLE,
+        Item: {
+            ...body,
+        },
+    }));
+    return {
+        statusCode: 200,
+        headers: {...defaultHeaders},
+        body: JSON.stringify(body),
+    }
+}
+
 export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
     console.log(`Event recieved: ${JSON.stringify(event, null, 2)}`);
     const routeKey = `${event.httpMethod} ${event.resource}`;
@@ -158,6 +174,8 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
                 return await getUsers(event);
             case UserRoutes.GET_USER:
                 return await getUser(event)
+            case UserRoutes.UPDATE_USER:
+                return await updateUser(event);
             default:
                 return {
                     statusCode: 400,
@@ -168,6 +186,6 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
                 }
             }
     } catch (error) {
-        throw error
+        throw error;
     }
 }

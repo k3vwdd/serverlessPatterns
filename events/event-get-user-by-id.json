@@ -1,13 +1,13 @@
 {
     "resource": "/users/{userid}",
-    "path": "/users/f8216640-91a2-11eb-8ab9-57aa454facef",
+    "path": "/users/c9554c3f-bbac-4116-901f-26a228ee9ba0",
     "httpMethod": "GET",
     "headers": null,
     "multiValueHeaders": null,
     "queryStringParameters": null,
     "multiValueQueryStringParameters": null,
     "pathParameters": {
-        "userid": "f8216640-91a2-11eb-8ab9-57aa454facef"
+        "userid": "c9554c3f-bbac-4116-901f-26a228ee9ba0"
     },
     "stageVariables": null,
     "requestContext": {
