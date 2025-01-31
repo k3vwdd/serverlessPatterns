@@ -232,7 +232,7 @@ class AuthPolicy {
   }
 }
 
-export const handler = (event: APIGatewayTokenAuthorizerEvent, context: Context): Promise<APIGatewayAuthorizerResult> => {
+export async function handler(event: APIGatewayTokenAuthorizerEvent, context: Context): Promise<APIGatewayAuthorizerResult> {
   /*
    * Section 2: Base setup & token validation
    */

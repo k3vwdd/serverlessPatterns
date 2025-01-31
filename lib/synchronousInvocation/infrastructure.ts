@@ -20,7 +20,14 @@ export class SynchronousInvocationStack extends cdk.Stack {
         billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     });
 
-    const  usersFunction = new lambda.Function(this, "UsersFunction", {
+    usersTable.addGlobalSecondaryIndex({
+        indexName: "username",
+        partitionKey: {
+            name: "username",
+            type: dynamodb.AttributeType.STRING,
+        }});
+
+    const usersFunction = new lambda.Function(this, "UsersFunction", {
         functionName: "UsersFunction",
         description: "Lambda function used to perform actions on the users data",
         runtime: lambda.Runtime.NODEJS_22_X,
@@ -35,6 +42,7 @@ export class SynchronousInvocationStack extends cdk.Stack {
     });
 
     usersTable.grantReadData(usersFunction);
+    usersTable.grantWriteData(usersFunction);
 
     const userPool = new cognito.UserPool(this, "user-pool", {
         userPoolName: `${Aws.STACK_NAME}-user-pool`,
