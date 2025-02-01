@@ -11,6 +11,7 @@
   "requestContext": {
       "requestId": "be946131-30c4-4396-9c29-f25f8caa91dc"
   },
-  "body": "{\"username\":\"Dexter\"}",
+  "body": "{\"username\":\"John Doe\"}",
   "isBase64Encoded": false
 }
+
